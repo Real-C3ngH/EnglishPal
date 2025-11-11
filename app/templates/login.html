@@ -1,0 +1,109 @@
+{% block body %}
+{% if session['logged_in'] %}
+
+你已登录 <a href="/{{ session['username'] }}/userpage">{{ session['username'] }}</a>。 登出点击<a href="/logout">这里</a>。
+
+{% else %}
+<meta charset="utf-8" name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=0.5, maximum-scale=3.0, user-scalable=yes" />
+<link rel="stylesheet" href="static/css/login_service.css">
+<script src="static/js/jquery.js"></script>
+<script>
+let blackList = [];
+
+<!--function getBlack() {-->
+<!--    const fs = require('fs');-->
+<!--    global.blackFile = fs.readFileSync('black', 'utf8');-->
+<!--    const blackListTemp = blackFile.split('\n');-->
+<!--    global.blackList = blackListTemp.map(line => line.trim()).filter(line => line !== '');-->
+<!--}-->
+
+function putUserIntoBlack(usernameTemp) {
+
+    blackList.push(usernameTemp);
+}
+
+function ifUsernameInBlack(usernameTemp) {
+    return blackList.includes(usernameTemp);
+}
+
+    count=0
+    function login()
+    {
+        let username = $("#username").val();
+        let password = $("#password").val();
+        if (username === "" || password === ""){
+            alert('输入不能为空!');
+            return false;
+        }
+        if (password.includes(' ')) {
+            alert('输入不能包含空格!');
+            return false;
+        }
+
+
+          $.post
+          (
+              "/login", {'username': username, 'password': password},
+
+              function (response)
+              {
+
+                if(response.status === '5')
+                {
+                  alert('已被加入黑名单，请联系管理员！');
+                }
+                else{
+                if(!ifUsernameInBlack(username))
+                {
+                  if (response.status === '0')
+                  {
+                      if(count<5)
+                      {
+                          alert('无法通过验证。');
+                          <!--window.location.href = "/login";-->
+                          count++;
+                      }
+                       else
+                      {
+                          <!--输入错误密码次数超过5次-->
+                          alert('密码输入错误超过五次，已被加入黑名单！');
+                          putUserIntoBlack(username);
+                          console.log(ifUsernameInBlack(username));
+                          response.status=5;
+                           $("#password").val('黑名单');
+                      }
+                  }
+                  else if (response.status === '1')
+                  {
+                        window.location.href = "/"+username+"/userpage";
+                  }
+                }
+                else if(ifUsernameInBlack(username))
+                {
+                    alert('已被加入黑名单！');
+
+                }
+                }
+              }
+          )
+
+
+
+        return false;
+    }
+</script>
+<div class="container">
+
+  <section class="signin-heading">
+    <h1>Sign in</h1>
+  </section>
+
+  <input type="text" placeholder="用户名" class="username" id="username">
+  <input type="password" placeholder="密码" class="password"  id="password">
+  <button type="button" class="btn" onclick="login()">登录</button>
+  <a class="signup" href="/signup">注册</a>
+</div>
+
+{% endif %}
+{% endblock %}
+

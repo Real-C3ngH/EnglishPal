@@ -1,0 +1,112 @@
+{% block body %}
+{% if session['logged_in'] %}
+    You're logged in already! <a href="/logout">Logout</a>.
+{% else %}
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=0.5, maximum-scale=3.0, user-scalable=yes" />
+    <link rel="stylesheet" href="static/css/login_service.css">
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE-edge,chrome=1">
+    <link href="static/css/slide-unlock.css" rel="stylesheet">
+    <script src="static/js/password.js"></script>
+    <script src="static/js/jquery.js"></script>
+    <script src="static/js/jquery.slideunlock.js"></script>
+    <script>
+    var slider
+    let username,password,password2
+    $(document).ready(function() {
+        slider = new SliderUnlock("#slider", {
+                successLabelTip: "验证成功"
+            }, function() {
+
+        });
+        slider.init(); // 初始化滑块解锁功能
+    });
+
+    function signup(){
+        // 发起 AJAX 请求来处理注册
+        username = $("#username").val().trim();
+        password = $("#password").val().trim();
+        password2 = $("#password2").val().trim();
+
+        // 基本表单验证
+        if (username === "" || password === "" || password2 === "") {
+            alert('输入不能为空!');
+            return false;
+        }
+        if (password.includes(' ') || password2.includes(' ')) {
+            alert('输入不能包含空格!');
+            return false;
+        }
+        if (password !== password2) {
+            alert('确认密码与输入密码不一致！');
+            return false;
+        }
+        if (password.length < 4) {
+            alert('密码过于简单。(密码长度至少4位)');
+            return false;
+        }
+        if (!containsDigitsLettersSpecialCharacters(password)) {
+            alert('密码过于简单。(密码要包括数字，字母，特殊符号)');
+            return false;
+        }
+        is_ok = slider.getIsOk();
+        if(!is_ok){
+            alert('没有滑动验证');
+            return false;
+        }
+        $.post("/signup", {
+            'username': username,
+            'password': password
+        }, function(response) {
+            if (response.status === '0') {
+                alert('用户名' + username + '已经被注册。');
+                window.location.href = "/signup";
+            } else if (response.status === '1') {
+                alert('用户名密码验证失败。');
+                window.location.href = "/signup";
+            } else if (response.status === '2') {
+                var f = confirm("恭喜，你已成功注册，你的用户名是" + username + '.\n点击“确认”开始使用，或点击“取消”返回首页');
+                if (f) {
+                    window.location.href = '/' + username + '/userpage';
+                } else {
+                    window.location.href = '/';
+                }
+            } else if (response.status === '3') {
+                alert(response.warn);
+            }
+        });
+        return false;
+    }
+</script>
+    <p>{{ get_flashed_messages()[0] | safe }}</p>
+
+    <div class="container">
+        <section class="signin-heading">
+            <h1>Sign up</h1>
+        </section>
+
+        <form>
+            <p><input type="text" id="username" placeholder="输入用户名" class="username"></p>
+            <p><input type="password" id="password" placeholder="输入密码" class="password"></p>
+            <p><input type="password" id="password2" placeholder="确认密码" class="password"></p>
+
+            <div id="slider">
+                <div id="slider_bg"></div>
+                <span id="label">>></span> <span id="labelTip">-----滑动验证你是不是人类</span>
+            </div>
+
+            <button type="button" class="btn" onclick="signup()">注册</button>
+        </form>
+    </div>
+
+    <script>
+        // Bind click event to the signup button
+        $(".btn").click(function() {
+            // Trigger slider unlock
+            var slider = new SliderUnlock("#slider");
+            slider.isOk();
+        });
+    </script>
+
+{% endif %}
+{% endblock %}

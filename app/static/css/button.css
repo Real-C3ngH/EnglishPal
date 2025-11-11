@@ -1,0 +1,37 @@
+/* 按钮(上一篇，下一篇)样式 */
+.pagination {
+  padding: 20px;
+  max-width: 600px;
+}
+
+.arrow {
+  margin-right: 15px;
+  display: flex;
+  align-items: center;
+  background: #007BFF; /* 按钮背景颜色 */
+  border: none;
+  color: #FFF; /* 按钮文字颜色 */
+  padding: 5px 12px;
+  font-size: 20px;
+  border-radius: 5px;
+  transition: background-color 0.3s ease;
+}
+
+.arrow i {
+  margin: 0 5px;
+}
+
+.arrow:hover {
+  background-color: #0056b3; /* 按钮悬停时的背景颜色 */
+  cursor: pointer;
+}
+
+.arrow:focus {
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.5);
+}
+
+/* 为首页时按钮(Pre Article)的背景颜色 */
+.gray-background {
+    background-color: #6c757d !important;
+}

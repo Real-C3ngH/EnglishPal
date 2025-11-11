@@ -1,0 +1,440 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport"
+          content="width=device-width, initial-scale=1.0, minimum-scale=0.5, maximum-scale=3.0, user-scalable=yes"/>
+    <meta name="format-detection" content="telephone=no"/>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <link rel="stylesheet" href="../static/css/button.css">
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.1/dist/js/bootstrap.bundle.min.js"></script>
+
+    {{ yml['header'] | safe }}
+    {% if yml['css']['item'] %}
+        {% for css in yml['css']['item'] %}
+            <link href="{{ css }}" rel="stylesheet">
+        {% endfor %}
+    {% endif %}
+    {% if yml['js']['head'] %}
+        {% for js in yml['js']['head'] %}
+            <script src="{{ js }}"></script>
+        {% endfor %}
+    {% endif %}
+
+    <title>EnglishPal Study Room for {{ username }}</title>
+
+    <style>
+      .shaking {
+          animation: shakes 1600ms ease-in-out;
+      }
+
+      @keyframes shakes {
+          10%, 90% { transform: translate3d(-1px, 0, 0); }
+          20%, 50% { transform: translate3d(+2px, 0, 0); }
+          30%, 70% { transform: translate3d(-4px, 0, 0); }
+          40%, 60% { transform: translate3d(+4px, 0, 0); }
+          50% { transform: translate3d(-4px, 0, 0); }
+      }
+
+      .lead{
+          font-size: 22px;
+          font-family: Helvetica, sans-serif;
+          white-space: pre-wrap;
+      }
+
+      .arrow {
+	  padding: 0;
+	  font-size: 20px;
+	  line-height: 21px;
+	  display: inline-block;
+      }
+
+      .arrow:hover {
+	  cursor: pointer;
+      }
+
+    </style>
+</head>
+<body>
+<div class="container-fluid">
+    <p><b>English Pal for <font id="username" color="red">{{ username }}</font></b>
+
+        {% if username ==  admin_name %}
+        <a class="btn btn-secondary" href="/admin" role="button" onclick="stopRead()">管理</a>
+        {% endif %}
+        <a id="quit" class="btn btn-secondary" href="/logout" role="button" onclick="stopRead()">退出</a>
+        <a class="btn btn-secondary" href="/reset" role="button" onclick="stopRead()">重设密码</a>
+
+    </p>
+    {% for message in get_flashed_messages() %}
+    <div class="alert alert-warning alert-dismissible fade show" role="alert">
+	{{ message }}
+	<button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+    {% endfor %}
+
+        <div class="pagination">
+          <button class="arrow" id="load_pre_article" onclick="load_pre_article();Reader.stopRead()" title="Previous Article">
+            <i class="fas fa-chevron-left"></i> 上一篇
+          </button>
+          <button class="arrow" id="load_next_article" onclick="load_next_article();Reader.stopRead()" title="Next Article">
+             下一篇 <i class="fas fa-chevron-right"></i>
+          </button>
+        </div>
+
+    <p><b>阅读文章并回答问题</b></p>
+
+    <div id="text-content">
+        <div id="found">
+          <div class="alert alert-success" role="alert">According to your word list, your level is <span class="text-decoration-underline" id="user_level">{{ today_article["user_level"] }}</span>  and we have chosen an article with a difficulty level of <span class="text-decoration-underline" id="text_level">{{ today_article["text_level"] }}</span> for you. The Oxford word coverage is <span class="text-decoration-underline" id="ratio">{{ (today_article["ratio"] * 100) | int }}%.</span></div>
+            <p class="text-muted" id="date">Article added on: {{ today_article["date"] }}</p><br/>
+
+	    <button onclick="saveArticle()" >标记文章</button>
+	    <select id="saved_articles_dropdown">
+	      <!-- 这里将显示已经保存的文章 -->
+	      <option></option>
+	    </select>
+
+            <div class="p-3 mb-2 bg-light text-dark" style="margin: 0 0.5%;"><br/>
+            <p class="display-6" id="article_title">{{ today_article["article_title"] }}</p><br/>
+            <p class="lead"><font id="article">{{ today_article["article_body"] }}</font></p><br/>
+            <div>
+                <p><small class="text-muted" id="source">{{ today_article['source'] }}</small></p><br/>
+            </div>
+
+            <p><b id="question">{{ today_article['question'] }}</b></p><br/>
+                <script type="text/javascript">
+                    function toggle_visibility(id) { {# https://css-tricks.com/snippets/javascript/showhide-element/#}
+                        const e = document.getElementById(id);
+                        if(e.style.display === 'block')
+                            e.style.display = 'none';
+                        else
+                            e.style.display = 'block';
+                    }
+                </script>
+                <button onclick="toggle_visibility('answer');">ANSWER</button>
+                <div id="answer" style="display:none;">{{ today_article['answer'] }}</div><br/>
+            </div>
+	    <div id="tooltip"></div>
+        </div>
+        <div class="alert alert-success" role="alert" id="not_found" style="display:none;">
+            <p class="text-muted"><span class="badge bg-success">Notes:</span><br>No article is currently available for you. You can try again a few times or mark new words in the passage to improve your level.</p>
+        </div>
+        <div class="alert alert-success" role="alert" id="read_all" style="display:none;">
+            <p class="text-muted"><span class="badge bg-success">Notes:</span><br>You've read all the articles.</p>
+        </div>
+    </div>
+
+    <input type="checkbox" id="highlightCheckbox" onclick="toggleHighlighting()" />生词高亮
+    <input type="checkbox" id="readCheckbox" onclick="onReadClick()" />大声朗读
+    <input type="checkbox" id="chooseCheckbox" onclick="onChooseClick()" />划词入库
+    <div class="range">
+        <div class="field">
+            <div class="sliderValue">
+                <span id="rangeValue">1×</span>
+            </div>
+            <input type="range" id="rangeComponent" min="0.5" max="2" value="1" step="0.25" />
+        </div>
+    </div>
+    <p><b>收集生词吧</b> （可以在正文中划词，也可以复制黏贴）</p>
+    <form method="post" action="/{{ username }}/userpage">
+        <textarea name="content" id="selected-words" rows="10" cols="120"></textarea><br/>
+        <button class="btn btn-primary btn-lg" type="submit" onclick="Reader.stopRead()">把生词加入我的生词库</button>
+        <button class="btn btn-primary btn-lg" type="reset"  onclick="clearSelectedWords()">清除</button>
+    </form>
+    {% if session.get['thisWord'] %}
+        <script type="text/javascript">
+            //point to the anchor in the page whose id is aaa if it exists
+            window.onload = function () {
+                var element = document.getElementsByName("aaa");
+                if (element != null)
+                    document.getElementsByName("aaa")[0].scrollIntoView(true);
+            }
+        </script>
+    {% endif %}
+
+    {% if d_len > 0 %}
+        <p>
+
+            <b>我的生词簿</b>
+            <label for="move_dynamiclly">
+                <input type="checkbox" name="move_dynamiclly" id="move_dynamiclly" checked>
+                允许动态调整顺序
+            </label>
+            <br>
+              <a class="btn btn-primary btn-lg"  onclick="random_select_word('{{ word }}')"   role="button">随机选取10个</a>
+            <a class="btn btn-primary btn-lg"  onclick="location.reload();"   role="button">显示所有生词</a>
+        </p>
+        <!--添加导出按钮-->
+        <button class="btn btn-primary" onclick="exportToCSV()">导出</button>
+        <a name="aaa"></a>
+        <div class="word-container">
+            {% for x in lst3 %}
+                {% set word = x[0] %}
+                {% set freq = x[1] %}
+                {% if session.get('thisWord') == x[0] and session.get('time') == 1 %}
+                {% endif %}
+                <p id='p_{{ word }}' class="new-word" >
+                    <a id="word_{{ word }}"  class="btn btn-light" href='http://youdao.com/w/eng/{{ word }}/#keyfrom=dict2.index'
+                    role="button">{{ word }}</a>
+                    ( <a id="freq_{{ word }}" title="{{ word }}">{{ freq }}</a> )
+                    <a class="btn btn-success" onclick=familiar("{{ word }}") role="button">熟悉</a>
+                    <a class="btn btn-warning" onclick=unfamiliar("{{ word }}") role="button">不熟悉</a>
+                    <a class="btn btn-danger" onclick=delete_word("{{ word }}") role="button">删除</a>
+                    <a class="btn btn-info" onclick=read_word("{{ word }}") role="button">朗读</a>
+                    <a class="btn btn-primary" onclick="addNote('{{ word }}'); saveNote('{{ word }}')" role="button">笔记</a> <!-- Modify to call addNote and then saveNote -->
+                    <input type="text" id="note_{{ word }}" class="note-input" placeholder="输入笔记内容" style="display:none;" oninput="saveNote('{{ word }}')"> <!-- Added oninput event -->
+                </p>
+            {% endfor %}
+        </div>
+        <input id="selected-words2" type="hidden" value="{{ words }}">
+
+    {% endif %}
+</div>
+{{ yml['footer'] | safe }}
+{% if yml['js']['bottom'] %}
+    {% for js in yml['js']['bottom'] %}
+        <script src="{{ js }}"></script>
+    {% endfor %}
+{% endif %}
+
+
+<script type="text/javascript">
+    // Function to show/hide note input and load saved note content from localStorage
+    function addNote(word) {
+        var noteInput = document.getElementById("note_" + word);
+        var savedNote = localStorage.getItem(word); // Get the saved note from localStorage
+        if (savedNote) {
+            noteInput.value = savedNote; // Set the saved note if it exists
+        }
+        noteInput.style.display = (noteInput.style.display === 'none') ? 'inline-block' : 'none'; // Toggle display
+    }
+
+    // Example function to save the note to localStorage
+    function saveNote(word) {
+        var noteContent = document.getElementById("note_" + word).value;
+        localStorage.setItem(word, noteContent); // Save the note content in localStorage
+        console.log('Note saved for ' + word + ': ' + noteContent); // Log for debugging purposes
+    }
+</script>
+
+
+<script type="text/javascript">
+    window.onload = function () { // 页面加载时执行
+        const settings = {
+            // initialize settings from localStorage
+            highlightChecked: localStorage.getItem('highlightChecked') !== 'false', // localStorage stores strings, default to true. same below
+            readChecked: localStorage.getItem('readChecked') !== 'false',
+            chooseChecked: localStorage.getItem('chooseChecked') !== 'false',
+            rangeValue: localStorage.getItem('rangeValue') || '1',
+            selectedWords: localStorage.getItem('selectedWords') || ''
+        };
+
+        const elements = {
+            highlightCheckbox: document.querySelector('#highlightCheckbox'),
+            readCheckbox: document.querySelector('#readCheckbox'),
+            chooseCheckbox: document.querySelector('#chooseCheckbox'),
+            rangeComponent: document.querySelector('#rangeComponent'),
+            rangeValueDisplay: document.querySelector('#rangeValue'),
+            selectedWordsInput: document.querySelector('#selected-words')
+        };
+        // 应用设置到页面元素
+        elements.highlightCheckbox.checked = settings.highlightChecked;
+        elements.readCheckbox.checked = settings.readChecked;
+        elements.chooseCheckbox.checked = settings.chooseChecked;
+        elements.rangeComponent.value = settings.rangeValue;
+        elements.rangeValueDisplay.textContent = `${settings.rangeValue}x`;
+<!--        elements.selectedWordsInput.value = settings.selectedWords;-->
+
+
+        // 刷新页面或进入页面时判断，若是首篇文章，则颜色为灰色
+        if (sessionStorage.getItem('pre_page_button') === 'display' || !sessionStorage.getItem('pre_page_button')) {
+            $('#load_pre_article').addClass('gray-background');
+        }
+
+        // 事件监听器
+        elements.selectedWordsInput.addEventListener('input', () => {
+            localStorage.setItem('selectedWords', elements.selectedWordsInput.value);
+        });
+
+        elements.rangeComponent.addEventListener('input', () => {
+            const rangeValue = elements.rangeComponent.value;
+            elements.rangeValueDisplay.textContent = `${rangeValue}x`;
+            localStorage.setItem('rangeValue', rangeValue);
+        });
+    };
+
+    function clearSelectedWords() {
+        localStorage.removeItem('selectedWords');
+        document.querySelector('#selected-words').value = '';
+    }
+
+
+    function load_next_article(){
+        $.ajax({
+            url: '/get_next_article/{{username}}',
+            dataType: 'json',
+            success: function(data) {
+                // 更新页面内容
+                if(data['today_article']){
+                    // answer不可见
+                    const e = document.getElementById('answer');
+                    e.style.display = 'none';
+                    update(data['today_article']);
+                    check_pre(data['visited_articles']);
+                    check_next(data['result_of_generate_article']);
+                    toggleHighlighting();
+                }
+            }
+        });
+    }
+    function load_pre_article(){
+        $.ajax({
+            url: '/get_pre_article/{{username}}',
+            dataType: 'json',
+            success: function(data) {
+                // 更新页面内容
+                if(data['today_article']){
+                    // answer不可见
+                    const e = document.getElementById('answer');
+                    e.style.display = 'none';
+                    update(data['today_article']);
+                    check_pre(data['visited_articles']);
+                    toggleHighlighting();
+                }
+            }
+        });
+    }
+    function update(today_article){
+        $('#user_level').html(today_article['user_level']);
+        $('#text_level').html(today_article["text_level"]);
+        $('#date').html('Article added on: '+today_article["date"]);
+        $('#article_title').html(today_article["article_title"]);
+        $('#article').html(today_article["article_body"]);
+        $('#source').html(today_article['source']);
+        $('#question').html(today_article["question"]);
+        $('#answer').html(today_article["answer"]);
+        $('#ratio').html(Math.round(today_article["ratio"] * 100) + '%');
+        document.querySelector('#text_level').classList.add('mark'); // highlight text difficult level for 2 seconds
+        setTimeout(() => {document.querySelector('#text_level').classList.remove('mark');}, 2000);
+        document.querySelector('#user_level').classList.add('mark'); // do the same thing for user difficulty level
+        setTimeout(() => {document.querySelector('#user_level').classList.remove('mark');}, 2000);
+    }
+    function check_pre(visited_articles){
+        if((visited_articles=='')||(visited_articles['index']<=0)){
+            $('#load_pre_article').addClass('gray-background'); // 设置为灰色
+            sessionStorage.setItem('pre_page_button', 'display')
+        }else{
+            $('#load_pre_article').removeClass('gray-background'); // 设置为正常蓝色
+            sessionStorage.setItem('pre_page_button', 'show')
+        }
+    }
+    function check_next(result_of_generate_article){
+        if(result_of_generate_article == "found"){
+            $('#found').show();$('#not_found').hide();
+            $('#read_all').hide();
+        }else if(result_of_generate_article == "not found"){
+            $('#found').hide();
+            $('#not_found').show();
+            $('#read_all').hide();
+        }else{
+            $('#found').hide();
+            $('#not_found').hide();
+            $('#read_all').show();
+        }
+    }
+    function saveArticle() {
+    const article = {
+        user_level: document.getElementById('user_level').innerText,
+        text_level: document.getElementById('text_level').innerText,
+        date: document.getElementById('date').innerText.replace('Article added on: ', ''),
+        article_title: document.getElementById('article_title').innerText,
+        article_body: document.getElementById('article').innerText,
+        source: document.getElementById('source').innerText,
+        question: document.getElementById('question').innerText,
+        answer: document.getElementById('answer').innerText
+    };
+
+    const articleJSON = JSON.stringify(article);
+    const articleTitle = article.article_title;
+    const savedArticlesDropdown = document.getElementById('saved_articles_dropdown');
+
+    var option = document.createElement('option');
+    option.text = articleTitle;
+    option.value = articleJSON; // 存储序列化的JSON字符串
+    option.title = article.article_title;
+    savedArticlesDropdown.appendChild(option);
+    localStorage.setItem(articleTitle, articleJSON); // 以文章标题为键，序列化的JSON字符串为值存储
+}
+  function loadSelectedArticle() {
+    const selectedOption = document.getElementById('saved_articles_dropdown');
+    const selectedTitle = selectedOption.options[selectedOption.selectedIndex].text;
+    const articleJSON = localStorage.getItem(selectedTitle);
+
+    if (articleJSON) {
+        const today_article = JSON.parse(articleJSON); // 解析JSON字符串为对象
+        update(today_article); // 使用解析出的对象更新页面
+    }
+}
+
+   window.onload = function() {
+     const savedArticlesDropdown = document.getElementById('saved_articles_dropdown');
+     savedArticlesDropdown.addEventListener('change', loadSelectedArticle);
+
+    // 先清空dropdown，以防有多余的选项或重新加载页面时出现重复
+    savedArticlesDropdown.innerHTML = '';
+
+    // 获取localStorage中最后一个（最新）的键值对
+    let latestKey, latestValue;
+    for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        const value = localStorage.getItem(key);
+        if (!latestKey) { // 第一次迭代时设置最新文章
+            latestKey = key;
+            latestValue = value;
+        }
+    }
+
+    // 首先添加最新保存的文章到下拉菜单
+
+            if (latestKey && latestValue) {
+            var latestOption = document.createElement('option');
+            latestOption.text = latestKey;
+            latestOption.value = latestValue;
+            latestOption.title = latestValue;
+            savedArticlesDropdown.appendChild(latestOption);
+        }
+
+        // 接着遍历其余文章并添加到下拉菜单
+        for (let i = 0; i < localStorage.length; i++) {
+            const key = localStorage.key(i);
+            const value = localStorage.getItem(key);
+            // 确保不重复添加最新文章
+            if (key !== latestKey && key !== 'selectedWords') {
+                var option = document.createElement('option');
+                option.text = key;
+                option.value = value;
+                option.title = value;
+                savedArticlesDropdown.appendChild(option);
+            }
+        }
+
+    savedArticlesDropdown.selectedIndex = -1;
+}
+
+    document.getElementById('rangeComponent').addEventListener('input', function() {
+    var rate = this.value;
+    Reader.updateRate(rate);
+});
+
+</script>
+</body>
+<style>
+    mark {
+        color: red;
+        background-color: rgba(0, 0, 0, 0);
+    }
+</style>
+
+</html>
