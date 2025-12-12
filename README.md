@@ -4,6 +4,10 @@
 
 
 
+> [!WARNING]
+>
+> 读完这个项目，我**释怀**的笑了。再无话说，请速动手。
+
 Hui Lan <hui.lan@cantab.net>
 
 1 November 2019
