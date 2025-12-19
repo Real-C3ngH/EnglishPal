@@ -7,7 +7,7 @@ import collections
 import html
 import string
 import operator
-import os, sys # 引入模块sys，因为我要用里面的sys.argv列表中的信息来读取命令行参数。
+import os, sys
 import vocabulary_adapter as pickle_idea
 
 
