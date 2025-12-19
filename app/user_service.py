@@ -12,8 +12,8 @@ from Article import get_today_article, load_freq_history
 from WordFreq import WordFreq
 from wordfreqCMD import sort_in_descending_order
 
-import pickle_idea
-import pickle_idea2
+import vocabulary_adapter as pickle_idea
+import vocabulary_adapter as pickle_idea2
 
 import logging
 logging.basicConfig(filename='log.txt', format='%(asctime)s %(message)s', level=logging.DEBUG)

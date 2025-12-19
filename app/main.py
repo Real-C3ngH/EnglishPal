@@ -14,6 +14,7 @@ from admin_service import adminService, ADMIN_NAME
 from api_service import apiService
 import os
 from translate import *
+import vocabulary_adapter as pickle_idea
 
 
 app = Flask(__name__)

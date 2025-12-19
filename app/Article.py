@@ -1,12 +1,13 @@
 from WordFreq import WordFreq
 from wordfreqCMD import youdao_link, sort_in_descending_order
-import pickle_idea, pickle_idea2
+import vocabulary_adapter as pickle_idea
+import vocabulary_adapter as pickle_idea2
 import os
 import random, glob
 import hashlib
 from datetime import datetime
 from flask import Flask, request, redirect, render_template, url_for, session, abort, flash, get_flashed_messages
-from difficulty import get_difficulty_level_for_user, text_difficulty_level, user_difficulty_level
+from vocabulary_adapter import get_difficulty_level_for_user, text_difficulty_level, user_difficulty_level
 from model.article import get_all_articles, get_article_by_id, get_number_of_articles
 import logging
 import re
