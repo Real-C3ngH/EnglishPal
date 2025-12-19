@@ -1,2 +1,5 @@
-#macos日志文件
 .DS_Store
+./app/__pycache__/
+./app/model/__pycache__/
+./app/static/frequency/frequency.p 
+./app/log.txt
